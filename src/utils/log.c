@@ -8,7 +8,7 @@
 #include <time.h>
 #include <string.h>
 
-#define ALTAR_LOG_DIRECTORY ("logs" ALTAR_PLATFORM_PATH_DELIMITER)
+#define ALTAR_LOG_DIRECTORY ("logs")
 #define ALTAR_LOG_FILENAME ("latest.txt")
 #define ALTAR_LOG_FORMAT ("%.4f %s[%s] %s%s\n")
 
@@ -18,7 +18,13 @@ static struct tm *local_date;
 static char *log_file;
 static char *compressed_file;
 static const char *ALTAR_LOG_URGENCY_LABELS[altar_log_urgency_count] = { "VERB", "INFO", "NOTE", "WARN", "ERRR" };
+
+// log colors in debug mode
+#ifdef ALTAR_DEBUG
 static const char *ALTAR_LOG_URGENCY_COLORS[altar_log_urgency_count + 1] = { "\033[2;37m", "\033[0;37m", "\033[1;32m", "\033[1;33m", "\033[7;31m", "\033[0m" };
+#else
+static const char *ALTAR_LOG_URGENCY_COLORS[altar_log_urgency_count + 1] = { "", "", "", "", "", "" };
+#endif
 
 // sets init_time, generates paths for the logging file, prints date and time
 void altar_utils_log_init(void) {
@@ -26,26 +32,26 @@ void altar_utils_log_init(void) {
 	time_t now = time(NULL);
 	local_date = localtime(&now);
 
-	// get the path of the directory to store logs
+	// get the path to store logs
 	char *data_directory = altar_utils_files_getDataDirectory();
-	unsigned log_directory_length = strlen(data_directory) + strlen(ALTAR_LOG_DIRECTORY);
-	char *log_directory = altar_realloc(data_directory, log_directory_length + 1);
-	strcat(log_directory, ALTAR_LOG_DIRECTORY);
+	char *log_directory = altar_utils_files_concatPaths(data_directory, ALTAR_LOG_DIRECTORY);
+	altar_free(data_directory);
+	if (log_directory) {
+		log_file = altar_utils_files_concatPaths(log_directory, ALTAR_LOG_FILENAME);
 
-	// create the path to the log file
-	log_file = altar_malloc(log_directory_length + strlen(ALTAR_LOG_FILENAME) + 1);
-	strcpy(log_file, log_directory);
-	strcat(log_file, ALTAR_LOG_FILENAME);
+		unsigned compressed_filename_length = 32;
+		char *compressed_filename = altar_malloc(compressed_filename_length);
+		while (!strftime(compressed_filename, compressed_filename_length, "%Y%m%dT%H%M%SZ.gz", local_date))
+			compressed_filename = altar_realloc(compressed_filename, compressed_filename_length *= 2);
+		compressed_file = altar_utils_files_concatPaths(log_directory, compressed_filename);
 
-	// create the path to the compressed log file
-	unsigned compressed_filename_length = 32;
-	char *compressed_filename = altar_malloc(compressed_filename_length);
-	while (!strftime(compressed_filename, compressed_filename_length, "%FT%T%Z.gz", local_date))
-		compressed_filename = altar_realloc(compressed_filename, compressed_filename_length *= 2);
-	compressed_file = altar_malloc(log_directory_length + strlen(compressed_filename) + 1);
-	strcpy(compressed_file, log_directory);
-	strcat(compressed_file, compressed_filename);
-	altar_free(compressed_filename);
+		altar_free(log_directory);
+
+#ifdef ALTAR_DEBUG
+		printf("Logging to '%s'.\nFile will be compressed to '%s' after termination.\n", log_file, compressed_file);
+#endif
+
+	}
 
 	// log the time and date
 	unsigned time_string_length = 32;
@@ -53,7 +59,8 @@ void altar_utils_log_init(void) {
 	while (!strftime(time_string, time_string_length, "%F %T %Z\n", local_date))
 		time_string = altar_realloc(time_string, time_string_length *= 2);
 	printf("%s", time_string);
-	altar_utils_files_overwrite(log_file, time_string);
+	if (log_file)
+		altar_utils_files_overwrite(log_file, time_string);
 	altar_free(time_string);
 
 	safe_to_log = true;
@@ -99,7 +106,8 @@ void altar_utils_log_variadic(enum altar_log_urgency urgency, const char *messag
 		ALTAR_LOG_URGENCY_COLORS[altar_log_urgency_count]);
 
 	printf("%s", log_string);
-	altar_utils_files_append(log_file, log_string);
+	if (log_file)
+		altar_utils_files_append(log_file, log_string);
 
 	altar_free(formatted_message);
 	altar_free(log_string);
@@ -108,7 +116,8 @@ void altar_utils_log_variadic(enum altar_log_urgency urgency, const char *messag
 void altar_utils_log_cleanup(void) {
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Ending logging session...");
 	safe_to_log = false;
-	altar_utils_files_compress_gz(log_file, compressed_file);
+	if (log_file && compressed_file)
+		altar_utils_files_compress_gz(log_file, compressed_file);
 	altar_free(compressed_file);
 	altar_free(log_file);
 	altar_utils_highresclock_destroy(init_clock);
