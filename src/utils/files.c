@@ -8,18 +8,20 @@
 #include <string.h>
 #include <zlib.h>
 #include <zip.h>
-#if ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 #include <sys/stat.h>
 #include <unistd.h>
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 #include <windows.h>
 #endif
 
-#if ALTAR_PLATFORM_LINUX
-#define locate_binary(buffer, buffer_size) readlink("/proc/self/exe", buffer, buffer_size)
-#elif ALTAR_PLATFORM_WINDOWS
-#define mkdir(dir, mode) mkdir(dir)
-#define locate_binary(buffer, buffer_size) GetModuleFileNameA(NULL, buffer, buffer_size)
+#if ALTAR_PLATFORM == LINUX
+#define get_known_directory() ((getenv("XDG_DATA_HOME")) ? strdup(getenv("XDG_DATA_HOME")) : altar_utils_files_concatPaths(getenv("HOME"), ".local/share"))
+#define locate_binary(buffer, buffer_size) (readlink("/proc/self/exe", buffer, buffer_size))
+#elif ALTAR_PLATFORM == WINDOWS
+#define get_known_directory() (_strdup(getenv("LOCALAPPDATA")))
+#define mkdir(dir, mode) (mkdir(dir))
+#define locate_binary(buffer, buffer_size) (GetModuleFileNameA(NULL, buffer, buffer_size))
 #endif
 
 struct altar_archive {
@@ -42,24 +44,16 @@ char *altar_utils_files_getProgramDirectory(void) {
 
 	// truncate binary filename from path
 	path_buffer[path_buffer_used] = '\0';
-	*strrchr(path_buffer, ALTAR_PLATFORM_PATH_DELIMITER) = '\0';
+	*strrchr(path_buffer, ALTAR_PATH_DELIMITER) = '\0';
 	return path_buffer;
 }
 
 char *altar_utils_files_getDataDirectory(void) {
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Locating user data directory...");
-	const char *envvar = NULL;
-	char *known_directory = NULL, *data_directory = NULL;
-
-#if ALTAR_PLATFORM_LINUX
-	envvar = getenv("XDG_DATA_HOME");
-	known_directory = (envvar) ? strdup(envvar) : altar_utils_files_concatPaths(getenv("HOME"), ".local/share");
-#elif ALTAR_PLATFORM_WINDOWS
-	envvar = getenv("LOCALAPPDATA");
-	known_directory = (envvar) ? _strdup(envvar) : altar_utils_files_concatPaths(getenv("PROGRAMDATA"), "ALTAR");
-#endif
+	char *known_directory = get_known_directory();
 
 	// FIXME: append client-defined "<app name>" instead
+	char *data_directory = NULL;
 	if (known_directory)
 		data_directory = altar_utils_files_concatPaths(known_directory, "ALTAR");
 	else
@@ -73,7 +67,7 @@ char *altar_utils_files_concatPaths(const char *const a, const char *const b) {
 	if (!a || !b)
 		return NULL;
 	char *result = altar_malloc(strlen(a) + strlen(b) + 2);
-	sprintf(result, "%s%c%s", a, ALTAR_PLATFORM_PATH_DELIMITER, b);
+	sprintf(result, "%s%c%s", a, ALTAR_PATH_DELIMITER, b);
 	return result;
 }
 
@@ -180,10 +174,10 @@ static void altar_utils_files_internal_mkdirForFile(const char *const file_path)
 	char *directory = strdup(file_path);
 	char *ptr = directory;
 	while (*++ptr) {
-		if (*ptr == ALTAR_PLATFORM_PATH_DELIMITER) {
+		if (*ptr == ALTAR_PATH_DELIMITER) {
 			*ptr = '\0';
 			mkdir(directory, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-			*ptr = ALTAR_PLATFORM_PATH_DELIMITER;
+			*ptr = ALTAR_PATH_DELIMITER;
 		}
 	}
 

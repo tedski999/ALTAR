@@ -7,19 +7,19 @@
 #include <stdarg.h>
 
 #ifdef ALTAR_DEBUG
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 #include <execinfo.h>
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 #include <windows.h>
 #include <dbghelp.h>
 #endif
 #define ALTAR_CALLSTACK_BUFFER_SIZE 128
 #endif
 
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 #define ALTAR_NORETURN __attribute__((noreturn))
 #define ALTAR_UNREACHABLE __builtin_unreachable();
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 #define ALTAR_NORETURN __declspec(noreturn)
 #define ALTAR_UNREACHABLE __assume(0)
 #endif
@@ -41,17 +41,16 @@ void altar_utils_error(const char *const message, ...) {
 	}
 
 #ifdef ALTAR_DEBUG
-
 	void *callstack[ALTAR_CALLSTACK_BUFFER_SIZE];
 
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 	int frame_count = backtrace(callstack, ALTAR_CALLSTACK_BUFFER_SIZE);
 	char **strs = backtrace_symbols(callstack, frame_count);
 	altar_utils_log(ALTAR_WARNING_LOG, "Callstack (%i frames):", frame_count);
 	for (int i = 0; i < frame_count; i++)
 		altar_utils_log(ALTAR_WARNING_LOG, "\t%s", strs[i]);
 	altar_free(strs);
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 	HANDLE process = GetCurrentProcess();
 	SymInitialize(process, NULL, 1);
 	unsigned short frames = CaptureStackBackTrace(0, ALTAR_CALLSTACK_BUFFER_SIZE, callstack, NULL);
@@ -64,7 +63,6 @@ void altar_utils_error(const char *const message, ...) {
 	}
 	altar_free(symbol);
 #endif
-
 #endif
 
 	exit(1);

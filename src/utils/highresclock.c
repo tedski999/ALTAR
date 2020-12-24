@@ -2,19 +2,17 @@
 #include "log.h"
 #include "memory.h"
 #include "../core/core.h"
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 #define _POSIX_C_SOURCE (200809L)
 #include <time.h>
-#elif ALTAR_PLATFORM_WINDOWS
-#include <windows.h>
+typedef struct timespec altar_time;
+#elif ALTAR_PLATFORM == WINDOWS
+#include <profileapi.h>
+typedef LARGE_INTEGER altar_time;
 #endif
 
 struct altar_highresclock {
-#ifdef ALTAR_PLATFORM_LINUX
-	struct timespec time;
-#elif ALTAR_PLATFORM_WINDOWS
-	LARGE_INTEGER time;
-#endif
+	altar_time time;
 };
 
 struct altar_highresclock *altar_utils_highresclock_create(void) {
@@ -26,18 +24,18 @@ struct altar_highresclock *altar_utils_highresclock_create(void) {
 
 unsigned long altar_utils_highresclock_resetTime(struct altar_highresclock *clock) {
 	unsigned long time = altar_utils_highresclock_timeInNanoseconds(clock);
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 	clock_gettime(CLOCK_MONOTONIC, &clock->time);
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 	QueryPerformanceCounter(&clock->time);
 #endif
 	return time;
 }
 
 double altar_utils_highresclock_timeInSeconds(struct altar_highresclock *clock) {
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 	return (double) altar_utils_highresclock_timeInNanoseconds(clock) / ALTAR_NANOSEC_PER_SEC;
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 	LARGE_INTEGER frequency, current_time;
 	QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&current_time);
@@ -46,11 +44,11 @@ double altar_utils_highresclock_timeInSeconds(struct altar_highresclock *clock) 
 }
 
 unsigned long altar_utils_highresclock_timeInNanoseconds(struct altar_highresclock *clock) {
-#ifdef ALTAR_PLATFORM_LINUX
+#if ALTAR_PLATFORM == LINUX
 	struct timespec current_time;
 	clock_gettime(CLOCK_MONOTONIC, &current_time);
 	return ((current_time.tv_sec - clock->time.tv_sec) * ALTAR_NANOSEC_PER_SEC) + (current_time.tv_nsec - clock->time.tv_nsec);
-#elif ALTAR_PLATFORM_WINDOWS
+#elif ALTAR_PLATFORM == WINDOWS
 	return (unsigned long) altar_utils_highresclock_timeInSeconds(clock) * ALTAR_NANOSEC_PER_SEC;
 #endif
 }
