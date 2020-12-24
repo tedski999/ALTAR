@@ -41,6 +41,10 @@ int main(void) {
 	struct altar_archive *archive = altar_utils_files_openArchive(archive_file);
 	altar_utils_log(ALTAR_NOTEWORTHY_LOG, "Archive read test: %s", altar_utils_files_readFromArchive(archive, "testData.txt"));
 	altar_utils_files_closeArchive(archive);
+	char *temp_file = altar_utils_files_concatPaths(program_directory, "delete.me");
+	altar_utils_files_overwrite(temp_file, "delet this");
+	altar_utils_files_delete(temp_file);
+	altar_free(temp_file);
 	altar_free(program_directory);
 	altar_free(archive_file);
 

@@ -29,7 +29,25 @@ struct altar_archive {
 static void altar_utils_files_internal_writeToFile(const char *const file_path, const char *const data, const char *const file_mode);
 static void altar_utils_files_internal_mkdirForFile(const char *const file_path);
 
+char *altar_utils_files_getProgramDirectory(void) {
+	altar_utils_log(ALTAR_VERBOSE_LOG, "Locating program directory...");
+
+	// fit path to binary in path_buffer
+	int path_buffer_used, path_buffer_size = 64;
+	char *path_buffer = altar_malloc(path_buffer_size);
+	while ((path_buffer_used = locate_binary(path_buffer, path_buffer_size - 1)) >= path_buffer_size - 2)
+		path_buffer = altar_realloc(path_buffer, path_buffer_size *= 2);
+	if (path_buffer_used <= 0)
+		altar_utils_error("Unable to locate program directory!");
+
+	// truncate binary filename from path
+	path_buffer[path_buffer_used] = '\0';
+	*strrchr(path_buffer, ALTAR_PLATFORM_PATH_DELIMITER) = '\0';
+	return path_buffer;
+}
+
 char *altar_utils_files_getDataDirectory(void) {
+	altar_utils_log(ALTAR_VERBOSE_LOG, "Locating user data directory...");
 	const char *envvar = NULL;
 	char *known_directory = NULL, *data_directory = NULL;
 
@@ -51,22 +69,6 @@ char *altar_utils_files_getDataDirectory(void) {
 	return data_directory;
 }
 
-char *altar_utils_files_getProgramDirectory(void) {
-
-	// fit path to binary in path_buffer
-	int path_buffer_used, path_buffer_size = 64;
-	char *path_buffer = altar_malloc(path_buffer_size);
-	while ((path_buffer_used = locate_binary(path_buffer, path_buffer_size - 1)) >= path_buffer_size - 2)
-		path_buffer = altar_realloc(path_buffer, path_buffer_size *= 2);
-	if (path_buffer_used <= 0)
-		altar_utils_error("Unable to locate program directory!");
-
-	// truncate binary filename from path
-	path_buffer[path_buffer_used] = '\0';
-	*strrchr(path_buffer, ALTAR_PLATFORM_PATH_DELIMITER) = '\0';
-	return path_buffer;
-}
-
 char *altar_utils_files_concatPaths(const char *const a, const char *const b) {
 	if (!a || !b)
 		return NULL;
@@ -81,6 +83,12 @@ void altar_utils_files_overwrite(const char *const file_path, const char *const 
 
 void altar_utils_files_append(const char *const file_path, const char *const data) {
 	altar_utils_files_internal_writeToFile(file_path, data, "a");
+}
+
+void altar_utils_files_delete(const char *const file_path) {
+	altar_utils_log(ALTAR_VERBOSE_LOG, "Deleting file '%s'...", file_path);
+	if (remove(file_path))
+		altar_utils_log(ALTAR_WARNING_LOG, "Unable to delete file '%s'!", file_path);
 }
 
 void altar_utils_files_compress_gz(const char *const src_file, const char *const dst_file) {
