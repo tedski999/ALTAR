@@ -7,7 +7,7 @@
 #include <time.h>
 typedef struct timespec altar_time;
 #elif ALTAR_PLATFORM == WINDOWS
-#include <profileapi.h>
+#include <windows.h>
 typedef LARGE_INTEGER altar_time;
 #endif
 

@@ -1,4 +1,5 @@
 #include "core.h"
+#include "window.h"
 #include "../utils/log.h"
 #include "../utils/highresclock.h"
 #include <stdlib.h>
@@ -12,6 +13,7 @@ static void altar_core_internal_signalCallback(int signal);
 
 static bool is_running = true;
 static struct altar_highresclock *clock;
+static struct altar_window *window;
 
 int main(void) {
 	atexit(altar_core_internal_cleanup);
@@ -19,7 +21,6 @@ int main(void) {
 
 	altar_utils_log(ALTAR_INFO_LOG, "Initializing game engine...");
 
-	// TODO: these don't handle Windows close callbacks
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Registering system signal callbacks...");
 	signal(SIGINT, altar_core_internal_signalCallback);
 	signal(SIGTERM, altar_core_internal_signalCallback);
@@ -31,6 +32,7 @@ int main(void) {
 	signal(SIGQUIT, altar_core_internal_signalCallback);
 #endif
 
+	window = altar_window_create();
 
 	altar_utils_log(ALTAR_INFO_LOG, "Executing client entrypoint function...");
 	altar_entrypoint();
@@ -49,8 +51,10 @@ int main(void) {
 
 		while (accumulated_time >= ALTAR_NANOSEC_PER_TICK) {
 			accumulated_time -= ALTAR_NANOSEC_PER_TICK;
+			altar_window_update(window);
 		}
 
+		altar_window_draw(window);
 
 	}
 
@@ -60,6 +64,7 @@ int main(void) {
 static void altar_core_internal_cleanup(void) {
 	altar_utils_log(ALTAR_INFO_LOG, "Cleaning up...");
 	altar_utils_highresclock_destroy(clock);
+	altar_window_destroy(window);
 	altar_utils_log_cleanup();
 }
 

@@ -7,6 +7,8 @@
 #define ALTAR_NANOSEC_PER_TICK (ALTAR_NANOSEC_PER_SEC / 120)
 #define ALTAR_MAX_NANOSEC_BEHIND (ALTAR_NANOSEC_PER_TICK * 60)
 
+#define LINUX 1
+#define WINDOWS 2
 #ifndef ALTAR_PLATFORM
 #if defined (_WIN32)
 #define ALTAR_PLATFORM WINDOWS
@@ -17,6 +19,10 @@
 #else
 #error "ALTAR does not currently support your target operating system!"
 #endif
+#endif
+
+#ifndef ALTAR_WINDOW_VENDOR
+#define ALTAR_WINDOW_VENDOR GLFW
 #endif
 
 #endif

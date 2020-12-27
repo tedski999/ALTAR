@@ -1,28 +1,27 @@
 
-cmake_minimum_required(VERSION 3.10)
-project(ALTAR)
+cmake_minimum_required(VERSION 3.13)
 
-file(GLOB_RECURSE src_files src/*.c)
-add_library(ALTAR STATIC ${src_files})
+project(
+	ALTAR
+	DESCRIPTION "Another Less Than Average Raycaster"
+	LANGUAGES C
+)
 
-set(CMAKE_C_STANDARD 89)
-set(CMAKE_C_STANDARD_REQUIRED True)
-if (NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE Release)
+# Optionals
+option(ALTAR_INSTALL "Enable installing the library" ON)
+option(ALTAR_BUILD_EXAMPLES "Build the ALTAR example programs" OFF)
+set(ALTAR_WINDOW_VENDOR GLFW CACHE STRING "Choose which window vendor to use")
+set_property(CACHE ALTAR_WINDOW_VENDOR PROPERTY STRINGS GLFW)
+
+# Install the public header
+if(ALTAR_INSTALL)
+	include(GNUInstallDirs)
+	install(DIRECTORY include/ALTAR DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN ALTAR.h)
 endif()
 
-target_include_directories(ALTAR PUBLIC src)
-target_compile_definitions(ALTAR PRIVATE $<$<CONFIG:DEBUG>:ALTAR_DEBUG>)
-
-set_target_properties(
-	ALTAR
-	PROPERTIES
-	PUBLIC_HEADER include/ALTAR.h
-)
-
-install(
-	TARGETS ALTAR
-	ARCHIVE DESTINATION lib
-	PUBLIC_HEADER DESTINATION include/ALTAR
-)
+# Subdirectories
+add_subdirectory(src)
+if(ALTAR_BUILD_EXAMPLES)
+	add_subdirectory(examples)
+endif()
 

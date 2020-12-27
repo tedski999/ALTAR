@@ -117,7 +117,7 @@ void altar_utils_log_cleanup(void) {
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Ending logging session...");
 	safe_to_log = false;
 	if (log_file && compressed_file)
-		altar_utils_files_compress_gz(log_file, compressed_file);
+		altar_utils_files_compress(log_file, compressed_file);
 	altar_free(compressed_file);
 	altar_free(log_file);
 	altar_utils_highresclock_destroy(init_clock);

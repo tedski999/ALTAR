@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <zlib.h>
-#include <zip.h>
+#include <minizip/zip.h>
+#include <minizip/unzip.h>
 #if ALTAR_PLATFORM == LINUX
 #include <sys/stat.h>
 #include <unistd.h>
@@ -25,7 +25,8 @@
 #endif
 
 struct altar_archive {
-	struct zip *zip;
+	const char *file_path;
+	struct unzFile *zip;
 };
 
 static void altar_utils_files_internal_writeToFile(const char *const file_path, const char *const data, const char *const file_mode);
@@ -85,7 +86,7 @@ void altar_utils_files_delete(const char *const file_path) {
 		altar_utils_log(ALTAR_WARNING_LOG, "Unable to delete file '%s'!", file_path);
 }
 
-void altar_utils_files_compress_gz(const char *const src_file, const char *const dst_file) {
+void altar_utils_files_compress(const char *const src_file, const char *const dst_file) {
 	if (!src_file || !dst_file)
 		return;
 
@@ -107,50 +108,46 @@ struct altar_archive *altar_utils_files_openArchive(const char *const file_path)
 	altar_utils_log(ALTAR_INFO_LOG, "Opening data archive at '%s'...", file_path);
 	struct altar_archive *archive = altar_malloc(sizeof *archive);
 
-	int err = 0;
-	archive->zip = zip_open(file_path, 0, &err);
-	if (err) {
+	*archive = (struct altar_archive) { file_path, unzOpen(file_path) };
+	if (!archive->zip) {
 		altar_free(archive);
-		struct zip_error error;
-		zip_error_init_with_code(&error, err);
-		altar_utils_error("Error opening archive: %s", zip_error_strerror(&error));
+		altar_utils_error("Could not open archive '%s'!", file_path);
 	}
 
 	return archive;
 }
 
 struct altar_archive_data altar_utils_files_readFromArchive(struct altar_archive *archive, const char *const file_path) {
-	altar_utils_log(ALTAR_INFO_LOG, "Reading '%s' from data archive...", file_path);
+	altar_utils_log(ALTAR_INFO_LOG, "Reading '%s' from archive '%s'...", file_path, archive->file_path);
+
+	altar_utils_log(ALTAR_VERBOSE_LOG, "Locating zip data...");
+	if (unzLocateFile(archive->zip, file_path, 1) != UNZ_OK)
+		altar_utils_error("Unable to locate '%s' within archive '%s'!", file_path, archive->file_path);
 
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Querying zip data...");
-	struct zip_stat stat;
-	zip_stat_init(&stat);
-	if (zip_stat(archive->zip, file_path, 0, &stat))
-		altar_utils_error("Error querying zip data: %s", zip_strerror(archive->zip));
-	char *data = altar_malloc(stat.size + 1);
+	unz_file_info file_info;
+	if (unzGetCurrentFileInfo(archive->zip, &file_info, NULL, 0, NULL, 0, NULL, 0) != UNZ_OK)
+		altar_utils_error("Unable to query '%s' within archive '%s'!", file_path, archive->file_path);
 
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Opening zip data...");
-	struct zip_file *file = zip_fopen(archive->zip, file_path, 0);
-	if (!file)
-		altar_utils_error("Error opening zip data: %s", zip_strerror(archive->zip));
+	if (unzOpenCurrentFile(archive->zip) != UNZ_OK)
+		altar_utils_error("Unable to open '%s' within archive '%s'!", file_path, archive->file_path);
 
 	altar_utils_log(ALTAR_VERBOSE_LOG, "Reading zip data...");
-	zip_int64_t bytes_read, bytes_remaining = stat.size;
-	do {
-		if ((bytes_read = zip_fread(file, data, stat.size)) == -1)
-			altar_utils_error("Error reading zip data: %s", zip_strerror(archive->zip));
-	} while (bytes_remaining -= bytes_read);
+	char *data = altar_malloc(file_info.uncompressed_size);
+	if (unzReadCurrentFile(archive->zip, data, file_info.uncompressed_size) != 0)
+		altar_utils_error("Unable to properly read '%s' within archive '%s'!", file_path, archive->file_path);
+	data[file_info.uncompressed_size - 1] = '\0';
 
-	zip_fclose(file);
-	data[stat.size] = '\0';
-	return (struct altar_archive_data) { data, stat.size + 1 };
+	unzCloseCurrentFile(archive->zip);
+	return (struct altar_archive_data) { data, file_info.uncompressed_size };
 }
 
 void altar_utils_files_closeArchive(struct altar_archive *archive) {
 	if (!archive)
 		return;
-	altar_utils_log(ALTAR_INFO_LOG, "Closing data archive...");
-	zip_close(archive->zip);
+	altar_utils_log(ALTAR_INFO_LOG, "Closing archive '%s'...", archive->file_path);
+	unzClose(archive->zip);
 	free(archive);
 }
 
