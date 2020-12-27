@@ -10,15 +10,14 @@ add_library(ALTAR STATIC
 	utils/memory.c utils/memory.h
 )
 
-target_include_directories(ALTAR PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}
-	${ZLIB_INCLUDE_DIR}
-	${LIBZIP_INCLUDE_DIR}
-)
+find_package(libzip CONFIG REQUIRED)
+find_package(ZLIB MODULE REQUIRED)
+target_link_libraries(ALTAR PRIVATE zip z)
 
 # Enable relevant vendors
 if(ALTAR_WINDOW_VENDOR STREQUAL "GLFW")
-	target_include_directories(ALTAR PRIVATE ${GLFW_INCLUDE_DIR})
+	find_package(glfw3 CONFIG REQUIRED)
+	target_link_libraries(ALTAR PRIVATE glfw)
 	target_sources(ALTAR PRIVATE vendor/window/GLFW/window.c vendor/window/GLFW/window.h)
 	target_compile_definitions(ALTAR PRIVATE ALTAR_WINDOW_VENDOR=GLFW)
 endif()
