@@ -27,23 +27,23 @@ static const char *ALTAR_LOG_URGENCY_COLORS[altar_log_urgency_count + 1] = { "",
 #endif
 
 // sets init_time, generates paths for the logging file, prints date and time
-void altar_utils_log_init(void) {
-	init_clock = altar_utils_highresclock_create();
+void altar_log_init(void) {
+	init_clock = altar_highresclock_create();
 	time_t now = time(NULL);
 	local_date = localtime(&now);
 
 	// get the path to store logs
-	char *data_directory = altar_utils_files_getDataDirectory();
-	char *log_directory = altar_utils_files_concatPaths(data_directory, ALTAR_LOG_DIRECTORY);
+	char *data_directory = altar_files_getDataDirectory();
+	char *log_directory = altar_files_concatPaths(data_directory, ALTAR_LOG_DIRECTORY);
 	altar_free(data_directory);
 	if (log_directory) {
-		log_file = altar_utils_files_concatPaths(log_directory, ALTAR_LOG_FILENAME);
+		log_file = altar_files_concatPaths(log_directory, ALTAR_LOG_FILENAME);
 
 		unsigned compressed_filename_length = 32;
 		char *compressed_filename = altar_malloc(compressed_filename_length);
 		while (!strftime(compressed_filename, compressed_filename_length, "%Y%m%dT%H%M%SZ.gz", local_date))
 			compressed_filename = altar_realloc(compressed_filename, compressed_filename_length *= 2);
-		compressed_file = altar_utils_files_concatPaths(log_directory, compressed_filename);
+		compressed_file = altar_files_concatPaths(log_directory, compressed_filename);
 
 		altar_free(log_directory);
 
@@ -60,20 +60,20 @@ void altar_utils_log_init(void) {
 		time_string = altar_realloc(time_string, time_string_length *= 2);
 	printf("%s", time_string);
 	if (log_file)
-		altar_utils_files_overwrite(log_file, time_string);
+		altar_files_overwrite(log_file, time_string);
 	altar_free(time_string);
 
 	safe_to_log = true;
 }
 
-void altar_utils_log(enum altar_log_urgency urgency, const char *message, ...) {
+void altar_log(enum altar_log_urgency urgency, const char *message, ...) {
 	va_list args;
 	va_start(args, message);
-	altar_utils_log_variadic(urgency, message, args);
+	altar_log_variadic(urgency, message, args);
 	va_end(args);
 }
 
-void altar_utils_log_variadic(enum altar_log_urgency urgency, const char *message, va_list args) {
+void altar_log_variadic(enum altar_log_urgency urgency, const char *message, va_list args) {
 #ifndef ALTAR_DEBUG
 	if (urgency == ALTAR_VERBOSE_LOG)
 		return;
@@ -82,7 +82,7 @@ void altar_utils_log_variadic(enum altar_log_urgency urgency, const char *messag
 	if (!safe_to_log)
 		return;
 
-	double time_since_init = altar_utils_highresclock_timeInSeconds(init_clock);
+	double time_since_init = altar_highresclock_timeInSeconds(init_clock);
 
 	// format message with args
 	va_list args_copy;
@@ -107,19 +107,19 @@ void altar_utils_log_variadic(enum altar_log_urgency urgency, const char *messag
 
 	printf("%s", log_string);
 	if (log_file)
-		altar_utils_files_append(log_file, log_string);
+		altar_files_append(log_file, log_string);
 
 	altar_free(formatted_message);
 	altar_free(log_string);
 }
 
-void altar_utils_log_cleanup(void) {
-	altar_utils_log(ALTAR_VERBOSE_LOG, "Ending logging session...");
+void altar_log_cleanup(void) {
+	altar_log(ALTAR_VERBOSE_LOG, "Ending logging session...");
 	safe_to_log = false;
 	if (log_file && compressed_file)
-		altar_utils_files_compress(log_file, compressed_file);
+		altar_files_compress(log_file, compressed_file);
 	altar_free(compressed_file);
 	altar_free(log_file);
-	altar_utils_highresclock_destroy(init_clock);
+	altar_highresclock_destroy(init_clock);
 }
 

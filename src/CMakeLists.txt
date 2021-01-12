@@ -18,7 +18,7 @@ target_link_libraries(ALTAR PRIVATE zip z)
 if(ALTAR_WINDOW_VENDOR STREQUAL "GLFW")
 	find_package(glfw3 CONFIG REQUIRED)
 	target_link_libraries(ALTAR PRIVATE glfw)
-	target_sources(ALTAR PRIVATE vendor/window/GLFW/window.c vendor/window/GLFW/window.h)
+	target_sources(ALTAR PRIVATE vendor/GLFW/window.c vendor/GLFW/window.h)
 	target_compile_definitions(ALTAR PRIVATE ALTAR_WINDOW_VENDOR=GLFW)
 endif()
 

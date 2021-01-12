@@ -3,26 +3,22 @@
 
 #define _XOPEN_SOURCE 500
 
-#define ALTAR_NANOSEC_PER_SEC (1000000000)
+#define ALTAR_NANOSEC_PER_SEC 1000000000
 #define ALTAR_NANOSEC_PER_TICK (ALTAR_NANOSEC_PER_SEC / 120)
 #define ALTAR_MAX_NANOSEC_BEHIND (ALTAR_NANOSEC_PER_TICK * 60)
 
-#define LINUX 1
-#define WINDOWS 2
-#ifndef ALTAR_PLATFORM
-#if defined (_WIN32)
-#define ALTAR_PLATFORM WINDOWS
-#define ALTAR_PATH_DELIMITER '\\'
-#elif defined (__linux__)
-#define ALTAR_PLATFORM LINUX
+#if (defined linux || defined _linux || defined __linux__)
+#define ALTAR_PLATFORM_LINUX 1
+#define ALTAR_PLATFORM_WINDOWS 0
+#define ALTAR_PLATFORM_GLFW 1
 #define ALTAR_PATH_DELIMITER '/'
+#elif (defined _WIN32 || defined _WIN64)
+#define ALTAR_PLATFORM_LINUX 0
+#define ALTAR_PLATFORM_WINDOWS 1
+#define ALTAR_PLATFORM_GLFW 1
+#define ALTAR_PATH_DELIMITER '\\'
 #else
 #error "ALTAR does not currently support your target operating system!"
-#endif
-#endif
-
-#ifndef ALTAR_WINDOW_VENDOR
-#define ALTAR_WINDOW_VENDOR GLFW
 #endif
 
 #endif

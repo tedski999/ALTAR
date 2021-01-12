@@ -12,10 +12,10 @@ enum altar_log_urgency {
 	altar_log_urgency_count
 };
 
-void altar_utils_log_init(void);
-void altar_utils_log(const enum altar_log_urgency urgency, const char *const message, ...);
-void altar_utils_log_variadic(const enum altar_log_urgency urgency, const char *const message, va_list args);
-void altar_utils_log_cleanup(void);
+void altar_log_init(void);
+void altar_log(const enum altar_log_urgency urgency, const char *const message, ...);
+void altar_log_variadic(const enum altar_log_urgency urgency, const char *const message, va_list args);
+void altar_log_cleanup(void);
 
 #endif
 
